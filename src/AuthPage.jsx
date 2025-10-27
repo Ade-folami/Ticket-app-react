@@ -1,207 +1,188 @@
-import React, { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { User, Lock, LogIn, UserPlus, Zap, AlertTriangle } from "lucide-react";
 import "./AuthPage.css";
 
-//Utility to handle mock authentication and user storage
+// --- MOCK AUTHENTICATION LOGIC  ---
 const USER_STORAGE_KEY = "ticketapp_users";
-
-//Helper function to load all users from localStorage
 const loadUsers = () => {
   const usersJson = localStorage.getItem(USER_STORAGE_KEY);
-  return usersJson ? JSON.parse(usersJson) : {};
+  let users = usersJson ? JSON.parse(usersJson) : {};
+  if (!users["admin"]) {
+    users["admin"] = "password";
+  }
+  return users;
 };
-
-//Helper function to save the entire user map to localStorage
 const saveUsers = (users) => {
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
 };
-
 const auth = {
+  isAuthenticated: () => !!localStorage.getItem("ticketapp_session"),
   login: (username, password) => {
     const users = loadUsers();
-
-    //Check if user exists and password matches
     if (users[username] && users[username] === password) {
       const token =
-        "mock-session-tokens" + Math.random().toString(36).substring(2.9);
+        "mock-session-token-" + Math.random().toString(36).substring(2, 9);
       localStorage.setItem("ticketapp_session", token);
       return { success: true, message: "Login successful!" };
     }
-
-    //Fallback: If no users are stored, allow the hardcoded admin user
-    if (
-      username === "admin" &&
-      password === "password" &&
-      Object.keys(users).length === 0
-    ) {
-      const token = "mock-session-token-admin";
-      localStorage.setItem("ticketapp-_session", token);
-      return { success: true, message: "Login successful! (Hardcoded Admin)" };
-    }
-    return { success: false, message: "Invalid username or password" };
+    return { success: false, message: "Invalid username or password." };
   },
-
   signup: (username, password) => {
     const users = loadUsers();
-
-    //Check if username already exists
-    if (users[username]) {
+    if (username.length < 3 || password.length < 6) {
       return {
         success: false,
-        message: "Signup failed. Username already taken",
+        message: "Username must be at least 3 chars and password at least 6.",
       };
     }
-    //Save the new user (username is the key, password is the value)
+    if (username === "admin" || users[username]) {
+      return { success: false, message: "Username already taken or reserved." };
+    }
     users[username] = password;
     saveUsers(users);
-
-    //Log them in immediately
     const token =
-      "mock-session-token" + Math.random().toString(36).substring(2, 20);
+      "mock-session-token-" + Math.random().toString(36).substring(2, 20);
     localStorage.setItem("ticketapp_session", token);
-
     return {
       success: true,
-      message: "Signup successful! Redirecting to Dashboard",
+      message: "Signup successful! Redirecting to Dashboard...",
     };
+  },
+  logout: () => {
+    localStorage.removeItem("ticketapp_session");
   },
 };
 
+// --- UI Component for displaying alerts/toasts ---
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`toast toast--${type}`}>
+      {type === "success" && <Zap size={20} className="toast__icon" />}
+      {type === "error" && <AlertTriangle size={20} className="toast__icon" />}
+      {message}
+    </div>
+  );
+};
+
+// --- Main Authentication Page Component  ---
 const AuthPage = () => {
-  const { type } = useParams();
-  const navigate = useNavigate();
-
-  const isLogin = type === "login";
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
 
-  //Toast display
-  const showToast = (message, isError = false) => {
-    setToast({ message, isError });
-    setTimeout(() => setToast(null), 3000);
-  };
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const validate = () => {
-    let newErrors = {};
-    if (!username.trim()) {
-      newErrors.username = "Username is required.";
+  const isLoginPage = location.pathname.includes("/login");
+
+  useEffect(() => {
+    if (auth.isAuthenticated()) {
+      navigate("/dashboard", { replace: true });
     }
-    if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-    if (!isLogin && password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match.";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }, [navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validate()) {
-      showToast("Please correct the validation errors below.", true);
+    if (!username || !password) {
+      setToast({
+        message: "Please enter both username and password.",
+        type: "error",
+      });
       return;
     }
 
-    let result;
-    if (isLogin) {
-      result = auth.login(username, password);
-    } else {
-      result = auth.signup(username, password);
-    }
+    let result = isLoginPage
+      ? auth.login(username, password)
+      : auth.signup(username, password);
 
     if (result.success) {
-      showToast(result.message, false);
-      setTimeout(() => navigate("/dashboard"), 1000);
+      setToast({ message: result.message, type: "success" });
+      setTimeout(() => navigate("/dashboard", { replace: true }), 1000);
     } else {
-      showToast(result.message, true);
+      setToast({ message: result.message, type: "error" });
     }
   };
 
-  const formTitle = isLogin ? "Account login" : "Create Account";
-  const submitButtonText = isLogin ? "Login" : "Signup";
+  const formTitle = isLoginPage ? "Welcome Back" : "Create Account";
+  const submitButtonText = isLoginPage ? "Log In" : "Sign Up";
+  const SubmitIcon = isLoginPage ? LogIn : UserPlus;
 
   return (
-    <div className="auth-container">
+    <div className="auth-page">
       <div className="auth-card">
-        <h2>{formTitle}</h2>
+        <div className="auth-header">
+          <h1 className="auth-title">{formTitle}</h1>
+          <p className="auth-subtitle">Access your Ticket Manager</p>
+        </div>
 
-        {/*Toast Notification */}
-        {toast && (
-          <div
-            className={`toast ${
-              toast.isError ? "toast-error" : "toast-success"
-            }`}
-          >
-            {toast.message}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
+        <form onSubmit={handleSubmit} className="auth-form">
+          {/* Username Input */}
+          <div className="input-group">
+            <User size={20} className="input-icon" />
             <input
               type="text"
-              id="username"
+              placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={errors.username ? "input-errror" : ""}
+              className="input-field"
+              required
             />
-            {errors.username && p.error}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
+          {/* Password Input */}
+          <div className="input-group">
+            <Lock size={20} className="input-icon" />
             <input
               type="password"
-              id="password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={errors.password ? "input-error" : ""}
+              className="input-field"
+              required
             />
-            {errors.password && (
-              <p className="error-message">{errors.password}</p>
-            )}
           </div>
 
-          {!isLogin && (
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={errors.confirmPassword ? "input-error" : ""}
-              />
-              {errors.confirmPassword && (
-                <p className="error-message">{error.confirmPassword}</p>
-              )}
-            </div>
-          )}
-          <button className="submit-btn">{submitButtonText}</button>
+          {/* Submit Button */}
+          <button type="submit" className="submit-button">
+            <SubmitIcon size={20} className="submit-icon" />
+            {submitButtonText}
+          </button>
         </form>
 
-        <p className="switch-auth">
-          {isLogin ? (
-            <>
-              Don't have an account? <Link to="/auth/signup">Sign up</Link>
-            </>
+        {/* Navigation Link */}
+        <div className="auth-footer">
+          {isLoginPage ? (
+            <p>
+              Don't have an account?{" "}
+              <Link to="/auth/signup" className="auth-link">
+                Sign Up
+              </Link>
+            </p>
           ) : (
-            <>
-              Already have an account? <Link to="/auth/login">Log in</Link>
-            </>
+            <p>
+              Already have an account?{" "}
+              <Link to="/auth/login" className="auth-link">
+                Log In
+              </Link>
+            </p>
           )}
-        </p>
+        </div>
       </div>
 
-      <footer className="footer">
-        &copy; {new Date().getFullYear()} TicketApp. All rights reserved.
-      </footer>
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
