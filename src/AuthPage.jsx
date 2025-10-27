@@ -2,23 +2,67 @@ import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import "./AuthPage.css";
 
-//Utility to handle mock authentication
+//Utility to handle mock authentication and user storage
+const USER_STORAGE_KEY = "ticketapp_users";
+
+//Helper function to load all users from localStorage
+const loadUsers = () => {
+  const usersJson = localStorage.getItem(USER_STORAGE_KEY);
+  return usersJson ? JSON.parse(usersJson) : {};
+};
+
+//Helper function to save the entire user map to localStorage
+const saveUsers = (users) => {
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+};
+
 const auth = {
   login: (username, password) => {
-    //Basic mock check: User: 'admin', Pass: 'password'
-    if (username === "admin" && password === "password") {
+    const users = loadUsers();
+
+    //Check if user exists and password matches
+    if (users[username] && users[username] === password) {
       const token =
-        "mock-session-token-" + Math.random().toString(36).substring(2, 9);
+        "mock-session-tokens" + Math.random().toString(36).substring(2.9);
       localStorage.setItem("ticketapp_session", token);
-      return { success: true, message: "Login successful" };
+      return { success: true, message: "Login successful!" };
+    }
+
+    //Fallback: If no users are stored, allow the hardcoded admin user
+    if (
+      username === "admin" &&
+      password === "password" &&
+      Object.keys(users).length === 0
+    ) {
+      const token = "mock-session-token-admin";
+      localStorage.setItem("ticketapp-_session", token);
+      return { success: true, message: "Login successful! (Hardcoded Admin)" };
     }
     return { success: false, message: "Invalid username or password" };
   },
+
   signup: (username, password) => {
-    localStorage.setItem("ticketapp_session", mock - session - token - newuser);
+    const users = loadUsers();
+
+    //Check if username already exists
+    if (users[username]) {
+      return {
+        success: false,
+        message: "Signup failed. Username already taken",
+      };
+    }
+    //Save the new user (username is the key, password is the value)
+    users[username] = password;
+    saveUsers(users);
+
+    //Log them in immediately
+    const token =
+      "mock-session-token" + Math.random().toString(36).substring(2, 20);
+    localStorage.setItem("ticketapp_session", token);
+
     return {
       success: true,
-      message: "Signup successful! Redirecting to Dashboard...",
+      message: "Signup successful! Redirecting to Dashboard",
     };
   },
 };
