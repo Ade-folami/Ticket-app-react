@@ -4,10 +4,13 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import LandingPage from "./LandingPage";
 import AuthPage from "./AuthPage";
 import Dashboard from "./Dashboard";
-import TicketManagement from "./TicketManagement";
+import TicketManagement from "./TIcketManagement";
 import ProtectedRoute from "./ProtectedRoute";
 import "./index.css";
 
+const auth = {
+  isAuthenticated: () => !!localStorage.getItem("ticketapp_session"),
+};
 const App = () => {
   return (
     <Routes>

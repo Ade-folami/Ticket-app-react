@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, Lock, LogIn, UserPlus, Zap, AlertTriangle } from "lucide-react";
 import "./AuthPage.css";
+// import "./testAuth.css";
 
 // --- MOCK AUTHENTICATION LOGIC  ---
 const USER_STORAGE_KEY = "ticketapp_users";

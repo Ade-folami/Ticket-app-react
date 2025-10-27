@@ -85,6 +85,7 @@
   height: 150px;
   clip-path: ellipse(100% 45% at 50% 100%);
   opacity: 0.8;
+  background-color: #4f46e5;
 }
 .decor-circle-hero {
   position: absolute;

@@ -113,7 +113,7 @@ const Dashboard = () => {
         <section className="quick-actions-section">
           <h2>Quick Actions</h2>
           <div className="action-grid">
-            <Link to="/tickets/create" className="action-card action-create">
+            <Link to="/tickets" className="action-card action-create">
               Create New TIcket
             </Link>
             <Link to="/tickets" className="action-card action-view">
