@@ -1,0 +1,7 @@
+#root,
+body,
+html {
+  min-height: 100vh;
+  font-family: sans-serif;
+  background-color: #ffffff;
+}
